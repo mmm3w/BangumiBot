@@ -10,7 +10,6 @@ import re
 from typing import Union
 
 from bangumi.entitiy import Episode
-from bangumi.parser.ai_parse import AIParse
 from functools import reduce
 from bangumi.consts.env import Env
 
@@ -142,9 +141,6 @@ class Parser:
 
     @staticmethod
     def parse_bangumi_name(raw_title: str) -> Union[Episode, None]:
-        open_ai_key = Env.get(Env.OPENAI_API_KEY, "", valueType=str)
-        if open_ai_key:
-            return AIParse.prase(raw_title)
         try:
             ret = Parser.__process(raw_title)
             if ret is None:

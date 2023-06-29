@@ -180,6 +180,7 @@ class Bangumi(object):
 
     def stop(self):
         logger.info("Stopping...")
+        redisDB.close_db()
         self.is_running = False
         self.config.stop_listener()
 

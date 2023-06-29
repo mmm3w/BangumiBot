@@ -1,3 +1,3 @@
-from .redis_db import RedisDB
+from .redis_db_sub import RedisDBSub
 
-redisDB = RedisDB()
+redisDB = RedisDBSub()
