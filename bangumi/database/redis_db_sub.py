@@ -24,18 +24,24 @@ class RedisDBSub(object):
             return
         logger.info("Connecting to SQLite3...")
         
+        #TODO 路径配置
         self.client = sqlite3.connect('BangumiDB.db')
         logger.info(f"Connected to SQLite3")
         #建表
         with closing(self.client.cursor()) as cursor:
-            #队列表
+            #信息列表
             cursor.execute('''CREATE TABLE IF NOT EXISTS pool_list 
-                                (_id    INT     PRIMARY KEY NOT NULL,
+                                (hash   TEXT     PRIMARY KEY NOT NULL,
                                  name   TEXT                NOT NULL,
                                  url    TEXT                NOT NULL,
-                                 pub_at INT                 NOT NULL,
-                                 length INT                 NOT NULL,
+                                 pub_at INTEGER             NOT NULL,
+                                 length INTEGER             NOT NULL);''')
+            
+            cursor.execute('''CREATE TABLE IF NOT EXISTS queue 
+                                (_id    INTEGER     PRIMARY KEY AUTOINCREMENT,
+                                 hash   TEXT                NOT NULL,
                                  time   TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP);''')
+            
             #放一些kv？
             cursor.execute('''CREATE TABLE IF NOT EXISTS mark 
                                 (key    TEXT    PRIMARY KEY NOT NULL,
@@ -51,17 +57,27 @@ class RedisDBSub(object):
         self.client.commit()
             
     def get(self, hash_: str) -> WaitDownloadItem:
-        #TODO 查询item
-        return None
-        ret = self.client.hgetall(hash_)
-        if not ret:
-            return None
-        return from_dict_to_dataclass(WaitDownloadItem, ret)
+        #查询item
+        with closing(self.client.cursor()) as cursor:
+            cursor.execute(f"SELECT * FROM pool_list WHERE hash='{hash_}'")
+            result = cursor.fetchone()
+            if result == None:
+                return None
+            else:
+                return WaitDownloadItem(
+                                name=result[1],
+                                url=result[2],
+                                pub_at=result[3],
+                                content_length=result[4])
 
     def remove(self, hash_: str) -> None:
-        #TODO 删除item
-        return None
-        self.client.delete(hash_)
+        #删除item
+        if not self.client: 
+            return
+        with closing(self.client.cursor()) as cursor:
+            cursor.execute(f"DELETE FROM pool_list WHERE hash='{hash_}'")
+            cursor.execute(f"DELETE FROM queue WHERE hash='{hash_}'")
+        self.client.commit()
 
     def update_last_checked_time(self):
         #更新最后检查的时间
@@ -86,29 +102,42 @@ class RedisDBSub(object):
     def add_to_torrent_queue(
         self, items: Union[WaitDownloadItem, List[WaitDownloadItem]]
     ) -> None:
-        #TODO 添加到队列
+        #添加到队列
         if isinstance(items, WaitDownloadItem):
             items = [items]
         for item in items:
-            self.client.rpush("pool_list", item.hash)
-            self.client.hset(item.hash, mapping=item.__dict__)
+            with closing(self.client.cursor()) as cursor:
+                cursor.execute(f"INSERT INTO queue (hash) values ('{item.hash}')")
+                cursor.execute(f"REPLACE INTO pool_list (name, url, hash, pub_at, length) values ('{item.name}', '{item.url}','{item.hash}',{item.pub_at},{item.content_length})")
+        self.client.commit()
 
     def pop_torrent_to_download(self) -> WaitDownloadItem:
-        #TODO 
-        return None
-        hash_ = self.client.lpop("pool_list")
-        if not hash_:
-            return None
-        return self.get(hash_)
+        try:
+            with closing(self.client.cursor()) as cursor:
+                cursor.execute(f"SELECT * FROM queue ORDER BY time LIMIT 1")
+                result = cursor.fetchone()
+                if result == None:
+                    return None
+                else:
+                    hash_ = result[0]
+                    cursor.execute(f"DELETE FROM queue WHERE hash='{hash_}'")
+                    return self.get(hash_)
+        finally:
+            self.client.commit()
+            
 
-    async def get_pending(self) -> List[WaitDownloadItem]:
+    def get_pending(self) -> List[WaitDownloadItem]:
         """
         返回还未添加进下载队列
         """
-        #TODO
-        return[]
-        hash_arr = self.client.lrange("pool_list", 0, 50)
-        return [self.get(hash_) for hash_ in hash_arr]
+        with closing(self.client.cursor()) as cursor:
+            cursor.execute(f"SELECT * FROM queue ORDER BY time LIMIT 50")
+            hash_arr = cursor.fetchall()
+            if hash_arr == None:
+                return None
+            else:
+                print(hash_arr)
+                return [self.get(hash_[1]) for hash_ in hash_arr]
         
 
     def get_key_from_formatted_name(self, name: str) -> str:
