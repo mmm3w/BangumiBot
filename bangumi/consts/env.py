@@ -17,9 +17,10 @@ class Env(Enum):
     CACHE_FOLDER = PREFIX + "CACHE_FOLDER"
     MEDIA_FOLDER = PREFIX + "MEDIA_FOLDER"
 
-    REDIS_HOST = PREFIX + "REDIS_HOST"
-    REDIS_PORT = PREFIX + "REDIS_PORT"
-    REDIS_PASSWORD = PREFIX + "REDIS_PASSWORD"
+    #REDIS_HOST = PREFIX + "REDIS_HOST"
+    #REDIS_PORT = PREFIX + "REDIS_PORT"
+    #REDIS_PASSWORD = PREFIX + "REDIS_PASSWORD"
+    SQLITE_PATH = PREFIX + "DB_PATH"
 
     CHECK_INTERVAL = PREFIX + "CHECK_INTERVAL"
 
@@ -61,10 +62,11 @@ class Env(Enum):
                 "Client Addr",
                 f"{env(Env.CLIENT_USERNAME)}:{env(Env.CLIENT_PASSWORD)}@{env(Env.CLIENT_IP)}:{env(Env.CLIENT_PORT)}",
             ],
-            [
-                "Redis",
-                f"{env(Env.REDIS_PASSWORD)}@{env(Env.REDIS_HOST)}:{env(Env.REDIS_PORT)}",
-            ],
+            # [
+            #     "Redis",
+            #     f"{env(Env.REDIS_PASSWORD)}@{env(Env.REDIS_HOST)}:{env(Env.REDIS_PORT)}",
+            # ],
+            ["Sqlite",env(Env.SQLITE_PATH)]
             ["Check", env(Env.CHECK_INTERVAL)],
             ["Download", env(Env.DOWNLOAD_FOLDER)],
             ["Cache", env(Env.CACHE_FOLDER)],

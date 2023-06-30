@@ -29,6 +29,8 @@ config/
 # Icon must end with two \r
 Icon
 
+#DBFile
+*.db
 
 # Thumbnails
 ._*

@@ -25,7 +25,7 @@ class RedisDBSub(object):
         logger.info("Connecting to SQLite3...")
         
         #TODO 路径配置
-        self.client = sqlite3.connect('BangumiDB.db')
+        self.client = sqlite3.connect(Env.get(Env.REDIS_HOST, "./config/BangumiDB.db"),'')
         logger.info(f"Connected to SQLite3")
         #建表
         with closing(self.client.cursor()) as cursor:
